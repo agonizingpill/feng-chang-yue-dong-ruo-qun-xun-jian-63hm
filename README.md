@@ -100,3 +100,15 @@ Seed增加FD-202611-A可用30kg、FD-HOLD隔离8kg、FD-EXPIRED已过期5kg，�
 GET /moves /insulation-lots /insulation-installs /spring-reviews供三角色；POST /moves、complete/cancel、POST /insulation-lots、POST /insulation-installs、PUT ventilation、POST remove及POST /spring-reviews允许蜂师/主管；move approve、insulation accept、spring pass及物料隔离仅主管，viewer全部只读。各新增模型均有外键；物料数量与春检值域由数据库和Pydantic校验。
 
 Seed只在缺失时增加IN-2026-WINTER 120件，不改人工库存/安装/春检；历史winter_ready无需补装以维持历史状态，新的春检动作才要求保温。真实证据在test-artifacts/gb-1027/v3/。本地检疫留痕不替代行政检疫证；每箱每季一条春检，本演示固定2026越冬季，无跨季归档。
+
+
+## V4 弱群并群合并单
+
+原九页完整保留，新增第十页“并群合并单”。弱群无王箱作为供群可在**同场**并入有王受箱（受群），ColonyMerge按 `MG-序号` 编号，状态 requested→approved→merged，未完成单可 cancelled。
+
+1. **申请拒办条件**：供群/受群同箱、跨场、供群有王或受群无王，任一箱存在未结处置（planned/executed/rechecked）、在途转场（requested/approved）或最新巡检处于 screening 待算筛查，一律 409 拒办；同一蜂箱不能同时挂两张活跃并群单。申请成功即冻结两箱业务：箱况编辑、巡检登记、筛查入队、处置计划、领料、蜂王观察、转场、保温安装、春检全部被 merge_service 守卫拦截。
+2. **批准与完成**：主管批准时重新复核上述条件（防止申请后情况变化）。批准后蜂师填报合并后的实测读数（体重/箱温/活动/余饲/蜂量，必须见王），系统在受群下新建一条 recorded 巡检，不重复利用旧读数；供群 Hive 置 retired 退役，受群同步新框数并回到 observe。供群退役、受群新巡检与 merge_provenance 合并来源在同一事务生效。
+3. **旧分值仅供追溯**：供群历史 Visit 与 anomaly_score 原样保留可查，但不再参与任何业务；合并新巡检必须按原 IsolationForest 算法筛查（worker 保留来源证据 merge_provenance），状态转为 screened 后才允许建 CareAction。退役箱的迟回筛查结果只写旧巡检，worker 守卫保证不把供群 care_state 复活。
+4. **回执与并发**：申请携带 request_key，回执丢失重试返回原单不重建；完成回执丢失用同一巡检编号重试返回原单、不重复生成巡检，换编号重试拒办。两箱按 id 顺序 SELECT … FOR UPDATE 加锁，并发申请同箱仅一方成功；巡检 code 唯一约束兜底并发登记。撤销未完成单（requested/approved）解除两箱冻结；已 merged 不可撤销。
+
+接口：`GET/POST /colony-merges`、`POST /colony-merges/{id}/approve`（主管）、`POST /colony-merges/{id}/complete`、`POST /colony-merges/{id}/cancel`；viewer 全部只读。新表 colony_merges 由 metadata 补建，Hive.care_state 新增 retired 取值（无旧列变更，历史数据不受影响）。前端新页 `pages/merges.js`；箱位页显示“冻”标记与退役灰化，巡检/筛查/处置/转场/保温/春检下拉排除冻结与退役箱，合并巡检证据卡展示两箱来历。后端新增 `merge_models.py/merge_schemas.py/merge_service.py/merge_routes.py`，yard/care/move/insulation/spring/feed/queen 各服务接冻结守卫，worker 抽出 handle_visit 保留来源并跳过退役箱状态变更。

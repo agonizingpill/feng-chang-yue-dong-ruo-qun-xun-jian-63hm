@@ -6,6 +6,8 @@ from .season_models import ApiaryMove
 from .yard_service import require,audit,latest
 
 def eligibility(db,h):
+    from .merge_service import ensure_in_play
+    ensure_in_play(db,h.id,'该蜂箱')
     active=db.scalar(select(CareAction.id).join(Visit,CareAction.visit_id==Visit.id).where(Visit.hive_id==h.id,CareAction.status.in_(['planned','executed','rechecked'])))
     if h.care_state!='winter_ready' or active or not h.queen_present or h.colony_frames<5:raise HTTPException(409,'须越冬合格、有王且至少5框，无活跃处置才能转场')
 

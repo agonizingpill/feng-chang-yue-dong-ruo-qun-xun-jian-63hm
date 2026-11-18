@@ -6,6 +6,8 @@ from .yard_service import require,audit,latest
 
 def plan(db,body,user):
     visit=require(db,Visit,body.visit_id,True);hive=require(db,Hive,visit.hive_id,True)
+    from .merge_service import ensure_in_play
+    ensure_in_play(db,hive.id,'该蜂箱')
     if latest(db,hive.id)!=visit.id:raise HTTPException(409,'请基于该箱最新巡检建立处置')
     if visit.status not in ['screened','needs_requeen']:raise HTTPException(409,'须先完成弱群筛查，或为无王复查建立换王处置')
     if body.feed_kg>3:raise HTTPException(409,'每箱单次饲喂不得超过3kg，请拆分到后续复查计划')

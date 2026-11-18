@@ -1,13 +1,16 @@
 from datetime import date
 from sqlalchemy import select
 from fastapi import HTTPException
-from .models import CareAction
+from .models import CareAction,Visit
 from .resource_models import QueenObservation
 from .yard_service import require,audit
 
 def observe(db,body,user,key=None):
     care=require(db,CareAction,body.care_id,True)
     if care.kind!='requeen' or care.status not in ['executed','rechecked'] or not care.queen_installed:raise HTTPException(409,'须先实际执行换王，已关闭或未执行处置不可登记观察')
+    visit=db.get(Visit,care.visit_id)
+    from .merge_service import ensure_in_play
+    ensure_in_play(db,visit.hive_id,'该蜂箱')
     if body.installed_on>date.today() or not care.executed_at or body.installed_on!=care.executed_at.date():raise HTTPException(409,'引入日期须与换王执行日期一致，不能填未来日期')
     item=require(db,QueenObservation,key,True) if key else None
     if item and (item.care_id!=care.id or item.state!='observing'):raise HTTPException(409,'主管已确认的蜂王观察不可改写或换关联')

@@ -23,3 +23,10 @@ class VisitState(StrEnum):
     CLOSED='closed'
     STALE='stale'
     BLOCKED='blocked'
+class MergeState(StrEnum):
+    REQUESTED='requested'
+    APPROVED='approved'
+    MERGED='merged'
+    CANCELLED='cancelled'
+ACTIVE_MERGE_STATES=['requested','approved']
+FINISHED_MERGE_STATES=['merged','cancelled']

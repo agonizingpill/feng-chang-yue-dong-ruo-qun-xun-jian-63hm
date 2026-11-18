@@ -16,6 +16,8 @@ def latest(db,hive_id):return db.scalar(select(func.max(Visit.id)).where(Visit.h
 def save_hive(db,body,user,key=None):
     hive=require(db,Hive,key,True) if key else Hive()
     if key:
+        from .merge_service import ensure_in_play
+        ensure_in_play(db,hive.id,'该蜂箱')
         from .season_models import ApiaryMove
         if db.scalar(select(ApiaryMove.id).where(ApiaryMove.hive_id==hive.id,ApiaryMove.state.in_(['requested','approved']))):raise HTTPException(409,'在途转场期间蜂箱档案冻结，可先撤销申请')
     if key and hive.care_state in ['caring','needs_requeen']:raise HTTPException(409,'该蜂群有进行中的处置，王况和框数请在复查簿记录')
@@ -26,19 +28,28 @@ def save_hive(db,body,user,key=None):
 
 def record_visit(db,body,user):
     hive=require(db,Hive,body.hive_id,True)
+    from .merge_service import ensure_in_play
+    ensure_in_play(db,hive.id,'该蜂箱')
     if hive.care_state in ['caring','needs_requeen']:raise HTTPException(409,'该箱处置未结束，请在处置簿登记复查，不能覆盖原巡检')
     if db.scalar(select(Visit).where(Visit.code==body.code)):raise HTTPException(409,'巡检编号已存在')
     visit=Visit(**body.model_dump());hive.queen_present=body.queen_seen;hive.colony_frames=body.colony_frames;hive.care_state='observe' if body.queen_seen else 'needs_care'
     db.add(visit);audit(db,user,f'巡箱 {hive.code} / {body.code} {body.weight_kg}kg');db.commit();return visit
 
 def enqueue_screen(db,user,queue,key=None):
+    from .merge_service import ensure_in_play
     if key:
         v=require(db,Visit,key,True)
+        ensure_in_play(db,v.hive_id,'该蜂箱')
         if latest(db,v.hive_id)!=v.id:raise HTTPException(409,'该箱已有更新巡检，请筛查最新记录')
         candidates=[v]
     else:
+        from .merge_models import ColonyMerge
+        from .constants import ACTIVE_MERGE_STATES
         ids=select(func.max(Visit.id)).group_by(Visit.hive_id)
-        candidates=db.scalars(select(Visit).where(Visit.id.in_(ids),Visit.status.in_(['recorded','screened','blocked'])).order_by(Visit.id).with_for_update()).all()
+        candidates=db.scalars(select(Visit).where(Visit.id.in_(ids),Visit.status.in_(['recorded','screened','blocked']),
+            Visit.hive_id.notin_(select(Hive.id).where(Hive.care_state=='retired')),
+            Visit.hive_id.notin_(select(ColonyMerge.donor_hive_id).where(ColonyMerge.state.in_(ACTIVE_MERGE_STATES)).union(select(ColonyMerge.recipient_hive_id).where(ColonyMerge.state.in_(ACTIVE_MERGE_STATES))))
+            ).order_by(Visit.id).with_for_update()).all()
     if not candidates:raise HTTPException(409,'没有可筛查的最新巡检，请先登记读数')
     for v in candidates:
         if v.status not in ['recorded','screened','blocked']:raise HTTPException(409,'已进入处置的巡检不能重新筛查或覆盖原值')

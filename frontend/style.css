@@ -5,3 +5,18 @@ textarea{font:inherit;color:var(--ink);width:100%;padding:10px;border:1px solid 
 nav{display:flex;flex-wrap:wrap}nav a{flex:1 1 10%;min-width:120px}.checkline{display:flex;gap:8px;align-items:center}.checkline input{width:auto}textarea{width:100%;min-height:70px;padding:10px;background:#fffdf4;border:1px solid #cbbd94;font:inherit}.resource-layout article.sheet{margin-bottom:12px}@media(max-width:600px){nav a{min-width:30%;font-size:12px}}
 
 .resource-layout .lot-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.resource-layout .lot-grid .sheet{padding:16px}.resource-layout .lot-grid h3{font-size:18px}@media(max-width:800px){.resource-layout .lot-grid{grid-template-columns:1fr}}
+.hive-cell.retired{opacity:.55;background:oklch(80% .02 70);text-decoration:line-through}
+.hive-cell.retired i{background:var(--muted)}
+.hive-cell.frozen{outline:2px dashed var(--red);outline-offset:1px}
+.hive-cell em{font-style:normal;font-size:9px;color:var(--red);position:absolute;top:2px;right:3px;font-weight:700}
+.legend .retired-dot{background:var(--muted);text-decoration:line-through}
+.merge-hive{border:1px solid var(--rule);padding:12px 14px;background:oklch(94% .03 85);min-width:0}
+.merge-hive.donor{border-left:3px solid var(--red)}
+.merge-hive.recipient{border-left:3px solid var(--leaf)}
+.merge-hive h4{margin:0 0 8px;font-size:14px}
+.cancel-form{border-top:1px dashed var(--rule);padding-top:14px;margin-top:8px;max-width:420px}
+.complete-form{border:1px solid var(--rule);padding:16px;background:oklch(94% .04 85);margin:12px 0}
+.badge.requested{color:var(--red);border-color:oklch(65% .10 35)}
+.badge.approved{background:var(--wax)}
+.badge.merged{color:var(--leaf);border-color:oklch(68% .07 135)}
+.badge.cancelled{color:var(--muted)}

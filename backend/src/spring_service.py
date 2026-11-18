@@ -6,6 +6,8 @@ from .yard_service import require,audit,latest
 
 def record(db,b,u):
     h=require(db,Hive,b.hive_id,True)
+    from .merge_service import ensure_in_play
+    ensure_in_play(db,h.id,'该蜂箱')
     if h.care_state!='winter_ready':raise HTTPException(409,'须已越冬合格的蜂群才能春检')
     if db.scalar(select(SpringReview.id).where(SpringReview.hive_id==h.id)):raise HTTPException(409,'该箱已有本季春检')
     install=db.scalar(select(InsulationInstall).where(InsulationInstall.hive_id==h.id,InsulationInstall.state=='accepted'))

@@ -19,6 +19,9 @@ def state(db,key,body,user):
 def issue(db,body,user):
     care=require(db,CareAction,body.care_id,True)
     if care.kind!='feed' or care.status!='planned':raise HTTPException(409,'仅计划中的饲喂处置可以领料')
+    visit=require(db,Visit,care.visit_id)
+    from .merge_service import ensure_in_play
+    ensure_in_play(db,visit.hive_id,'该蜂箱')
     if db.scalar(select(FeedIssue).where(FeedIssue.care_id==care.id)):raise HTTPException(409,'该饲喂已领料，禁止重复扣料')
     lot=require(db,FeedLot,body.lot_id,True)
     if lot.state!='active':raise HTTPException(409,'隔离批次禁止领用')

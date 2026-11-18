@@ -6,6 +6,8 @@ from .yard_service import require,audit
 
 def install(db,b,u):
     h=require(db,Hive,b.hive_id,True)
+    from .merge_service import ensure_in_play
+    ensure_in_play(db,h.id,'该蜂箱')
     if db.scalar(select(InsulationInstall.id).where(InsulationInstall.hive_id==h.id,InsulationInstall.state.in_(['installed','accepted']))):raise HTTPException(409,'该箱已有活跃保温安装')
     lot=require(db,InsulationLot,b.lot_id,True)
     if lot.state!='active' or lot.available_units<b.units:raise HTTPException(409,'保温物料隔离或库存不足')
